@@ -16,9 +16,58 @@ html,body {
 <script type="text/javascript">
 var ws;
 
+function hex2a(pStr) {
+        tempstr = '';
+        for (b = 0; b < pStr.length; b = b + 2) {
+            tempstr = tempstr + String.fromCharCode(parseInt(pStr.substr(b, 2), 16));
+        }
+        return tempstr;
+    }
+
+function hexsend(){
+	var txt,msg;
+	txt = $("msg");
+	msg = txt.value;
+	if(!msg) { 
+		alert("Message can not be empty"); 
+		return; 
+	}
+	txt.value="";
+	txt.focus();
+	try { 
+		var hex = hex2a(msg);
+		ws.send(hex); 
+		log('Sent: '+msg+' - '+hex); 
+	} catch(ex) { 
+		log(ex); 
+	}
+}
+
+
+function binsend(){
+	var txt,msg;
+	txt = $("msg");
+	msg = txt.value;
+	if(!msg) { 
+		alert("Message can not be empty"); 
+		return; 
+	}
+	txt.value="";
+	txt.focus();
+	try { 
+		var buffer = new ArrayBuffer(128);
+		ws.send(buffer);
+		//ws.send(hex); 
+		log('Sent: '+msg+' - '+buffer); 
+	} catch(ex) { 
+		log(ex); 
+	}
+}
+
+
 
 function init() {
-	var host = "ws://127.0.0.1:9000/echobot"; // SET THIS TO YOUR SERVER host:port/ressource
+	var host = "ws://vortexz.com:8080"; // SET THIS TO YOUR SERVER host:port/ressource
 	try {
 		ws = new WebSocket(host); // (host,protocol) protocol placed in order of priority
 		log('WebSocket - status '+ws.readyState);
@@ -33,6 +82,7 @@ function init() {
 		};
 		ws.onclose   = function(msg) { 
 			console.log(msg);
+			console.log(msg.code);
 			log("Disconnected - status "+this.readyState); 
 		};
 	}
@@ -83,6 +133,8 @@ function onkey(event){ if(event.keyCode==13){ send(); } }
 <h3>WebSocket v2.00</h3>
 <div id="log"></div>
 <input id="msg" type="textbox" onkeypress="onkey(event)"/>
+<button onclick="binsend()">binary Send</button>
+<button onclick="hexsend()">hexSend</button>
 <button onclick="send()">Send</button>
 <button onclick="quit()">Quit</button>
 <button onclick="reconnect()">Reconnect</button>

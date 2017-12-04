@@ -1,12 +1,12 @@
 <?php 
 
 // Default method 
-class eventloop_socket extends core_websockets {
+class eventloop_stream extends core_websockets {
   public function run($apps) {
     var_dump($apps);
     $this->apps=$apps;
     $this->mem = memory_get_usage();
-    $this->stdout("RUNNING with socket_select() method");
+    $this->stdout("RUNNING with stream_select() method");
     while(true) {
       if (empty($this->readWatchers)) {
         $this->readWatchers['m'] = $this->master;
@@ -14,7 +14,7 @@ class eventloop_socket extends core_websockets {
       $read = $this->readWatchers;
       $write = $this->writeWatchers;
       $except = null;
-      socket_select($read,$write,$except,null);
+      stream_select($read,$write,$except,null);
       //outgoing data -- sending buffered data to client
       if ($write) {
         foreach ($write as $socket) {
@@ -27,7 +27,7 @@ class eventloop_socket extends core_websockets {
       //incoming data
       foreach ($read as $socket) {
         if ($socket == $this->master) {
-          $client = socket_accept($socket);
+          $client = stream_socket_accept($socket);
           if (!$client) {
             $this->stderr("Failed: socket_accept()");
             continue;
@@ -67,30 +67,24 @@ class eventloop_socket extends core_websockets {
   }
 
   protected function ws_server($addr,$port){
-    $master = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)  or die("Failed: socket_create()");
-    socket_set_option($master, SOL_SOCKET, SO_REUSEADDR, 1) or die("Failed: socket_option()");
-    socket_bind($master, $addr, $port)                      or die("Failed: socket_bind()");
-    socket_listen($master,1024)                             or die("Failed: socket_listen()");
-    socket_set_nonblock($master)							              or die("Failed: socket_set_nonblock()");
+    $master = stream_socket_server("tcp://$addr:$port", $errno, $errstr)  or die("Failed: stream_socket_server()");;
+    stream_set_blocking($master,false)							                      or die("Failed: stream_set_blocking()");
     return $master;
   }
 
   protected function ws_write_t($handle,$buffer) {
-     $size = strlen($buffer);
-     $sent = socket_write($handle, $buffer,$this->maxBufferSize);
-     return $sent;
+    $sent = fwrite($handle,$buffer,$this->maxBufferSize);
+    return $sent;
   }
 
   protected function ws_read_t($socket,&$buffer,$maxBufferSize) {
-     $numBytes = socket_recv($socket,$buffer,$maxBufferSize,0);
-     return $numBytes;
-  }
- 
-  protected function ws_close_t($handle) {
-     //socket_close($handle);
-     socket_shutdown($handle, 1);
+     $buffer = fread($socket,$maxBufferSize);
+     return strlen($buffer);
   }
 
-  
+  protected function ws_close_t($handle) {
+    stream_socket_shutdown($handle,STREAM_SHUT_WR);
+  }
+
 }
 
